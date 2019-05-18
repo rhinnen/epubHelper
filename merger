@@ -1,0 +1,223 @@
+#!/Library/Frameworks/Python.framework/Versions/3.7/bin/python3
+#
+# (That line is included so we don't have to launch the program
+# as 'python <program>', we can just run it directly on the commandline.
+# The path specified there is the path to your preferred version of
+# python. How to make a python package executable on a windows machine
+# is different.)
+#
+# merger
+# 
+# This is a simple program to show how we can process lines in a file
+# So we're dealing with lists, loops, and commandline arguments
+#
+import sys # imports the system library - this is for commandlines
+import os  # imports the os level library - this is for file operations
+from shutil import copyfile
+
+
+def find(search, line):
+# This module is designed to find a sting in a line.
+	value = ""  # setting a default value for 'value'
+	index = line.find(search) 
+	# find returns the index that the search string starts on
+	# and a -1 if the string is not found
+	if index > -1: # if the string is found
+		value = line[index + len(search):line.find(" -->") - len(line)]
+		# strip out the parts of the line I don't want
+	return value # return just the data part of the string
+
+def doBookInfo(filepath):
+	global bookInfo
+	with open(filepath) as fp:
+		for line in fp:
+			findTitle = "<!-- Title: "
+			findBookDir = "<!-- BookDir: "
+			findAuthorFirst = "<!-- AuthorFirst: "
+			findAuthorLast = "<!-- AuthorLast: "
+			if line.find(findTitle) > -1:
+				title = line[line.find(findTitle) + len(findTitle):-5]
+			elif line.find(findBookDir) > -1:
+				bookDir = line[line.find(findBookDir) + len(findBookDir):-5]
+			elif line.find(findAuthorFirst) > -1:
+				authorFirst = line[line.find(findAuthorFirst) + len(findAuthorFirst):-5]
+			elif line.find(findAuthorLast) > -1:
+				authorLast = line[line.find(findAuthorLast) + len(findAuthorLast):-5]
+	bookInfo = [title, bookDir, authorFirst, authorLast]
+	os.mkdir(bookDir)
+	os.mkdir(bookDir + "/META-INF")
+	os.mkdir(bookDir + "/OEBPS")
+	os.mkdir(bookDir + "/OEBPS/Images")
+	os.mkdir(bookDir + "/OEBPS/Styles")
+	os.mkdir(bookDir + "/OEBPS/Text")
+	copyfile("source/book/mimetype", bookDir + "/mimetype")
+	copyfile("source/book/META-INF/com.apple.ibooks.display-options.xml", bookDir + "/META-INF/com.apple.ibooks.display-options.xml")
+	copyfile("source/book/META-INF/container.xml", bookDir + "/META-INF/container.xml")
+	copyfile("source/book/OEBPS/Images/cover.jpg", bookDir + "/OEBPS/Images/cover.jpg")
+	copyfile("source/book/OEBPS/Images/image-01.jpg", bookDir + "/OEBPS/Images/image-01.jpg")
+	copyfile("source/book/OEBPS/Images/image-02.png", bookDir + "/OEBPS/Images/image-02.png")
+	copyfile("source/book/OEBPS/Styles/Inconsolata-Regular.otf", bookDir + "/OEBPS/Styles/Inconsolata-Regular.otf")
+	copyfile("source/book/OEBPS/Styles/invisible1.ttf", bookDir + "/OEBPS/Styles/invisible1.ttf")
+	copyfile("source/book/OEBPS/Styles/MgOpenModataRegular.ttf", bookDir + "/OEBPS/Styles/MgOpenModataRegular.ttf")
+	copyfile("style.css", bookDir + "/OEBPS/Styles/style.css")
+
+   	
+
+def dochapters(filepath):
+	with open(filepath) as fp:
+		for line in fp: # this is going to let me look at every line in the file
+			search = "<!-- Start: " # looking for the start of a new section
+			found = find(search, line) # use the find sub
+			if len(found) > 0:         # if I found something, found will be > 0
+				chapterHead = found  # great, get the string
+				file = fp.readline()   # read the next line of the original file
+				search = "<!-- File: " # Look for some data
+				found = find(search, file) 
+				if len(found) > 0: 
+					writefilename = "Text/" + found.split()[0]
+					chapterid = found.split()[1] 
+					chapters.append([chapterHead, writefilename, chapterid])  
+					writeFile = open(bookInfo[1] + "/OEBPS/" + writefilename, 'w') # open it as a file to write
+					templatefile = "source/blankchapter.xhtml"
+					with open(templatefile) as template:
+						for templine in template:
+							search = "[ID]"
+							found = templine.find(search)
+							if found > 0:
+								newline = templine[0:found] + chapterid + templine[found+4:]
+								writeFile.write(newline)
+							elif templine.find("[TITLE]") > 0:
+								found = templine.find("[TITLE]")
+								newline = templine[0:found] + chapterHead + templine[found+7:]
+								writeFile.write(newline)
+							else:
+								found = templine.find("[TITLE]")
+								search = "[BODY]"
+								found = templine.find(search)
+								if found > 0:
+									nextline = fp.readline()
+									while nextline != "<!-- End: -->\n":
+										writeFile.write(nextline)
+										nextline = fp.readline()
+								else:
+									writeFile.write(templine)
+					
+					writeFile.close()      # close the write file
+		coverFile = "source/blankcover.xhtml"
+		coverDestination = bookInfo[1] + "/OEBPS/Text/cover.xhtml"
+		title="[TITLE]"
+		wf = open(coverDestination, 'w')
+		with open(coverFile) as cover:
+			for line in cover:
+				if line.find(title) > -1:
+					newline = line[0:line.find(title)] + bookInfo[0] + line[line.find(title) + len(title):]
+					wf.write(newline)
+				else:
+					wf.write(line)
+		wf.close()
+					
+
+	# and our original file will be closed when our loop is finished
+	
+def dotocxhtml():
+	tocFile = "source/blanktoc.xhtml"
+	tocOutFile = bookInfo[1] + "/OEBPS/Text/toc.xhtml"
+	titleSearch = "[TITLE]"
+	title = bookInfo[0]
+	firstnameSearch = "Firstname"
+	lastnameSearch = "Lastname"
+	firstname = bookInfo[2]
+	lastname = bookInfo[3]
+	tocOut = open(tocOutFile, 'w')
+	with open(tocFile) as toc:
+		for line in toc:
+			if line == "[TOC]\n":
+				for each in chapters:
+					tocOut.write("\t\t<li><a href=\"../" + each[1] + "\"><span>" + each[0] + "</span></a></li>\n")
+			elif line.find(titleSearch) > -1:
+				newline = line[0:line.find(titleSearch)] + title + line[line.find(titleSearch)+len(titleSearch):]
+				tocOut.write(newline)
+			elif line.find(firstnameSearch) > -1:
+				newline = ""
+				splitline = line.split()
+				for word in splitline:
+					if word == firstnameSearch:
+						word = firstname
+					elif word == lastnameSearch:
+						word = lastname
+					newline += (word + " ")
+				tocOut.write(newline)
+			else:
+				tocOut.write(line)
+	chapters.insert(0,["Table of Contents", "Text/toc.xhtml", "toc"])
+	tocOut.close()
+					
+def docontent():
+	
+	contentFile = "source/blankcontent.opf"
+	contentOutFile = bookInfo[1] + "/OEBPS/content.opf"
+	contentOut = open(contentOutFile, 'w')
+	with open(contentFile) as content:
+		for line in content:
+			if line == "[MANIFEST]\n":
+				for each in chapters:
+					contentOut.write("\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n")
+			elif line == "[SPINE]\n":
+				for each in chapters:
+					contentOut.write("\t<itemref idref=\"" + each[2] + "\" />\n")
+			elif line == "[GUIDE]\n":
+				for each in chapters:
+					contentOut.write("\t<reference href=\"" + each [1] + "\" type=\"text\" />\n")
+			elif line.find("[TITLE]") > -1:
+				contentOut.write(line[0:line.find("[TITLE]")] + bookInfo[0] + line[line.find("[TITLE]") + len("[TITLE]"):])
+			else:
+				contentOut.write(line)
+	contentOut.close()
+	
+def dotocncx():
+	tocFile = "source/blanktoc.ncx"
+	tocOut = bookInfo[1] + "/OEBPS/toc.ncx"
+	tocOut = open(tocOut, 'w')
+	with open(tocFile) as toc:
+		for line in toc:
+			if line == "[NCX]\n":
+				point = 2
+				for each in chapters:
+					tocOut.write("\t<navPoint id =\"" + each[2] + "\" playOrder=\"" + str(point) + "\">\n")
+					tocOut.write("\t\t<navLabel>\n")
+					tocOut.write("\t\t\t<text>" + each[0] + "</text>\n")
+					tocOut.write("\t\t</navLabel>\n")
+					tocOut.write("\t\t<content src=\"" + each[1] + "\"/>\n")
+					tocOut.write("\t</navPoint>\n")
+					point += 1
+			else:
+				tocOut.write(line)
+	tocOut.close()
+	
+def main():
+# This is the main loop
+	if len(sys.argv) < 2:
+	# sys.argv will return the commandline the program was called with.
+	# the element at 0 is the name of the program called
+	# the element at 1 we expect to be the path to a filename
+	# if you didn't give us an argument, tell them and quit
+		print("No filename included: Exiting...")
+		exit()
+	filepath = sys.argv[1]
+	# ok, grab that first argument
+	if not os.path.isfile(filepath):
+	# does the file exist?
+		print("File path {} does not exist. Exiting...".format(filepath))
+		# if it doesn't, tell the user and quit
+		exit()
+	doBookInfo(filepath)
+	dochapters(filepath)
+	dotocxhtml()
+	docontent()
+	dotocncx()
+	
+bookInfo = []
+chapters = []
+main() # run the program
+
+	
