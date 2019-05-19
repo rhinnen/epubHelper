@@ -5,14 +5,14 @@
     <!-- ISBN -->
     <dc:identifier id="bookid" opf:scheme="ISBN">urn:isbn:[ISBN]</dc:identifier>
     <dc:title>[TITLE]</dc:title>
-    <dc:rights>Copyright © 2019 Rory Hinnen. All rights reserved.</dc:rights>
+    <dc:rights>Copyright © 2019 [COPYRIGHT]. All rights reserved.</dc:rights>
 
     <!-- BISAC Subject Headings List: http://bisg.org/?page=BISACFaQ -->
-    <dc:subject>[Subjects]</dc:subject>
+    <dc:subject>[SUBJECTS]</dc:subject>
 
     <dc:creator opf:file-as="Lastname, Firstname" opf:role="aut">Firstname Lastname</dc:creator>
 
-    <dc:source>https://hinnen.us/epub/[source]</dc:source>
+    <dc:source>[SOURCE]</dc:source>
 
     <!-- List of contributors
 
@@ -36,11 +36,11 @@
 
          -->
 
-    <dc:contributor opf:file-as="Hinnen, Rory" opf:role="edt">Rory Hinnen</dc:contributor>
-    <dc:contributor opf:file-as="Hinnen, Robin" opf:role="cov">Robin Hinnen</dc:contributor>
+    <dc:contributor opf:file-as="Lastname, Firstname" opf:role="edt">Firstname Lastname</dc:contributor>
+    <dc:contributor opf:file-as="Lastname, Firstname" opf:role="cov">Firstname Lastname</dc:contributor>
 
-    <dc:publisher>Chartreuse Necktie</dc:publisher>
-    <dc:date opf:event="publication">2019-05-11</dc:date>
+    <dc:publisher>[PUBLISHER]</dc:publisher>
+    <dc:date opf:event="publication">YYYY-MM-DD</dc:date>
 
     <!-- Language code: http://en.wikipedia.org/wiki/List_of_ISO_639-2_codes -->
     <dc:language>en</dc:language>

@@ -69,6 +69,7 @@ def dochapters(filepath):
 			search = "<!-- Start: " # looking for the start of a new section
 			found = find(search, line) # use the find sub
 			if len(found) > 0:         # if I found something, found will be > 0
+				print("chapter")
 				chapterHead = found  # great, get the string
 				file = fp.readline()   # read the next line of the original file
 				search = "<!-- File: " # Look for some data
@@ -96,9 +97,10 @@ def dochapters(filepath):
 								found = templine.find(search)
 								if found > 0:
 									nextline = fp.readline()
-									while nextline != "<!-- End: -->\n":
+									while nextline.find("<!-- End: -->") == -1:
 										writeFile.write(nextline)
 										nextline = fp.readline()
+										print("looking for End")
 								else:
 									writeFile.write(templine)
 					
@@ -108,6 +110,7 @@ def dochapters(filepath):
 		title="[TITLE]"
 		wf = open(coverDestination, 'w')
 		with open(coverFile) as cover:
+			print("working on cover")
 			for line in cover:
 				if line.find(title) > -1:
 					newline = line[0:line.find(title)] + bookInfo[0] + line[line.find(title) + len(title):]
@@ -211,10 +214,15 @@ def main():
 		# if it doesn't, tell the user and quit
 		exit()
 	doBookInfo(filepath)
+	print("bookInfo")
 	dochapters(filepath)
+	print("chapters")
 	dotocxhtml()
+	print("toc")
 	docontent()
+	print("content")
 	dotocncx()
+	print("toc.ncx")
 	
 bookInfo = []
 chapters = []
