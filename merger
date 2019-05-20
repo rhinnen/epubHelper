@@ -39,17 +39,6 @@ def extract(search, line):
 	# returns the juicy data, without the cruft
 	if line.find(search) > -1:
 		return line[line.find(search) + len(search):-len(" -->\n")] # these lines should always end " -->\n"
-	
-def find(search, line):
-# This module is designed to find a sting in a line.
-	value = ""  # setting a default value for 'value'
-	index = line.find(search) 
-	# find returns the index that the search string starts on
-	# and a -1 if the string is not found
-	if index > -1: # if the string is found
-		value = line[index + len(search):line.find(" -->") - len(line)]
-		# strip out the parts of the line I don't want
-	return value # return just the data part of the string
 
 def doBookInfo(filepath):
 	# global bookInfo
