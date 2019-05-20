@@ -13,9 +13,21 @@
 #
 import sys # imports the system library - this is for commandlines
 import os  # imports the os level library - this is for file operations
-from shutil import copyfile
+from shutil import copytree, rmtree, copyfile
 
-
+def replace(search, result, line):
+	# I do this several times in the code, so hey, mod it!
+	newline = line
+	found = line.find(search)
+	if found > -1:
+		newline = line[0:found] + result + line[found + len(search):]
+	return newline
+	
+def extract(search, line):
+	# returns the juicy data, without the cruft
+	if line.find(search) > -1:
+		return line[line.find(search) + len(search):-len(" -->\n")] # these lines should always end " -->\n"
+	
 def find(search, line):
 # This module is designed to find a sting in a line.
 	value = ""  # setting a default value for 'value'
@@ -28,7 +40,11 @@ def find(search, line):
 	return value # return just the data part of the string
 
 def doBookInfo(filepath):
-	global bookInfo
+	# global bookInfo
+	global title
+	global bookDir
+	global authorFirst
+	global authorLast
 	with open(filepath) as fp:
 		for line in fp:
 			findTitle = "<!-- Title: "
@@ -36,101 +52,77 @@ def doBookInfo(filepath):
 			findAuthorFirst = "<!-- AuthorFirst: "
 			findAuthorLast = "<!-- AuthorLast: "
 			if line.find(findTitle) > -1:
-				title = line[line.find(findTitle) + len(findTitle):-5]
+				title = extract(findTitle, line)
 			elif line.find(findBookDir) > -1:
-				bookDir = line[line.find(findBookDir) + len(findBookDir):-5]
+				bookDir = extract(findBookDir, line)
 			elif line.find(findAuthorFirst) > -1:
-				authorFirst = line[line.find(findAuthorFirst) + len(findAuthorFirst):-5]
+				authorFirst = extract(findAuthorFirst, line)
 			elif line.find(findAuthorLast) > -1:
-				authorLast = line[line.find(findAuthorLast) + len(findAuthorLast):-5]
+				authorLast = extract(findAuthorLast, line)
 	bookInfo = [title, bookDir, authorFirst, authorLast]
-	os.mkdir(bookDir)
-	os.mkdir(bookDir + "/META-INF")
-	os.mkdir(bookDir + "/OEBPS")
-	os.mkdir(bookDir + "/OEBPS/Images")
-	os.mkdir(bookDir + "/OEBPS/Styles")
-	os.mkdir(bookDir + "/OEBPS/Text")
-	copyfile("source/book/mimetype", bookDir + "/mimetype")
-	copyfile("source/book/META-INF/com.apple.ibooks.display-options.xml", bookDir + "/META-INF/com.apple.ibooks.display-options.xml")
-	copyfile("source/book/META-INF/container.xml", bookDir + "/META-INF/container.xml")
-	copyfile("source/book/OEBPS/Images/cover.jpg", bookDir + "/OEBPS/Images/cover.jpg")
-	copyfile("source/book/OEBPS/Images/image-01.jpg", bookDir + "/OEBPS/Images/image-01.jpg")
-	copyfile("source/book/OEBPS/Images/image-02.png", bookDir + "/OEBPS/Images/image-02.png")
-	copyfile("source/book/OEBPS/Styles/Inconsolata-Regular.otf", bookDir + "/OEBPS/Styles/Inconsolata-Regular.otf")
-	copyfile("source/book/OEBPS/Styles/invisible1.ttf", bookDir + "/OEBPS/Styles/invisible1.ttf")
-	copyfile("source/book/OEBPS/Styles/MgOpenModataRegular.ttf", bookDir + "/OEBPS/Styles/MgOpenModataRegular.ttf")
+	
+	if os.path.isdir(bookDir):
+		rmtree(bookDir)
+	copytree("source/book", bookDir)
 	copyfile("style.css", bookDir + "/OEBPS/Styles/style.css")
 
-   	
-
 def dochapters(filepath):
+	global chapters
+	startChapter = "<!-- Start: "
+	chapterFile = "<!-- File: "
+	endFile = "<!-- End: -->"
+	idTag = "[ID]"
+	titleTag = "[TITLE]"
+	bodyTag = "[BODY]"
+	searchAuthor = "Firstname Lastname"
 	with open(filepath) as fp:
 		for line in fp: # this is going to let me look at every line in the file
-			search = "<!-- Start: " # looking for the start of a new section
-			found = find(search, line) # use the find sub
-			if len(found) > 0:         # if I found something, found will be > 0
-				print("chapter")
-				chapterHead = found  # great, get the string
-				file = fp.readline()   # read the next line of the original file
-				search = "<!-- File: " # Look for some data
-				found = find(search, file) 
-				if len(found) > 0: 
-					writefilename = "Text/" + found.split()[0]
-					chapterid = found.split()[1] 
-					chapters.append([chapterHead, writefilename, chapterid])  
-					writeFile = open(bookInfo[1] + "/OEBPS/" + writefilename, 'w') # open it as a file to write
+			if line.find(startChapter) > -1:         # if I found something, found will be > 0
+				chapterHead = extract(startChapter, line)  # great, get the string
+				line = fp.readline()   # read the next line of the original file
+				if line.find(chapterFile) > -1: 
+					filename = extract(chapterFile, line).split()[0]
+					chapterID = extract(chapterFile, line).split()[1]
+					chapters.append([chapterHead, "Text/" + filename, chapterID])  
+					writeFile = open(bookDir + "/OEBPS/Text/" + filename, 'w') # open it as a file to write
 					templatefile = "source/blankchapter.xhtml"
 					with open(templatefile) as template:
 						for templine in template:
-							search = "[ID]"
-							found = templine.find(search)
-							if found > 0:
-								newline = templine[0:found] + chapterid + templine[found+4:]
-								writeFile.write(newline)
-							elif templine.find("[TITLE]") > 0:
-								found = templine.find("[TITLE]")
-								newline = templine[0:found] + chapterHead + templine[found+7:]
-								writeFile.write(newline)
+							if templine.find(idTag) > -1:
+								found = templine.find(idTag)
+								templine = templine[0:found] + chapterID + templine[found+4:]
+							elif templine.find(titleTag) > -1:
+								found = templine.find(titleTag)
+								templine = templine[0:found] + chapterHead + templine[found+7:]
 							else:
-								found = templine.find("[TITLE]")
-								search = "[BODY]"
-								found = templine.find(search)
-								if found > 0:
+								if templine.find(bodyTag) > -1:
 									nextline = fp.readline()
-									while nextline.find("<!-- End: -->") == -1:
+									while nextline.find(endFile) == -1:
 										writeFile.write(nextline)
 										nextline = fp.readline()
-										print("looking for End")
-								else:
-									writeFile.write(templine)
-					
+									templine = ""
+							writeFile.write(templine)
 					writeFile.close()      # close the write file
 		coverFile = "source/blankcover.xhtml"
-		coverDestination = bookInfo[1] + "/OEBPS/Text/cover.xhtml"
-		title="[TITLE]"
+		coverDestination = bookDir + "/OEBPS/Text/cover.xhtml"
 		wf = open(coverDestination, 'w')
 		with open(coverFile) as cover:
-			print("working on cover")
 			for line in cover:
-				if line.find(title) > -1:
-					newline = line[0:line.find(title)] + bookInfo[0] + line[line.find(title) + len(title):]
-					wf.write(newline)
-				else:
-					wf.write(line)
+				if line.find(titleTag) > -1:
+					line = replace(titleTag, title, line)
+				elif line.find(searchAuthor) > -1:
+					line = replace(searchAuthor, authorFirst + " " + authorLast, line)
+				wf.write(line)
 		wf.close()
-					
-
-	# and our original file will be closed when our loop is finished
 	
 def dotocxhtml():
 	tocFile = "source/blanktoc.xhtml"
-	tocOutFile = bookInfo[1] + "/OEBPS/Text/toc.xhtml"
+	tocOutFile = bookDir + "/OEBPS/Text/toc.xhtml"
 	titleSearch = "[TITLE]"
-	title = bookInfo[0]
 	firstnameSearch = "Firstname"
 	lastnameSearch = "Lastname"
-	firstname = bookInfo[2]
-	lastname = bookInfo[3]
+	firstname = authorFirst
+	lastname = authorLast
 	tocOut = open(tocOutFile, 'w')
 	with open(tocFile) as toc:
 		for line in toc:
@@ -155,10 +147,9 @@ def dotocxhtml():
 	chapters.insert(0,["Table of Contents", "Text/toc.xhtml", "toc"])
 	tocOut.close()
 					
-def docontent():
-	
+def docontent():	
 	contentFile = "source/blankcontent.opf"
-	contentOutFile = bookInfo[1] + "/OEBPS/content.opf"
+	contentOutFile = bookDir + "/OEBPS/content.opf"
 	contentOut = open(contentOutFile, 'w')
 	with open(contentFile) as content:
 		for line in content:
@@ -172,14 +163,14 @@ def docontent():
 				for each in chapters:
 					contentOut.write("\t<reference href=\"" + each [1] + "\" type=\"text\" />\n")
 			elif line.find("[TITLE]") > -1:
-				contentOut.write(line[0:line.find("[TITLE]")] + bookInfo[0] + line[line.find("[TITLE]") + len("[TITLE]"):])
+				contentOut.write(line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):])
 			else:
 				contentOut.write(line)
 	contentOut.close()
 	
 def dotocncx():
 	tocFile = "source/blanktoc.ncx"
-	tocOut = bookInfo[1] + "/OEBPS/toc.ncx"
+	tocOut = bookDir + "/OEBPS/toc.ncx"
 	tocOut = open(tocOut, 'w')
 	with open(tocFile) as toc:
 		for line in toc:
@@ -214,17 +205,16 @@ def main():
 		# if it doesn't, tell the user and quit
 		exit()
 	doBookInfo(filepath)
-	print("bookInfo")
 	dochapters(filepath)
-	print("chapters")
 	dotocxhtml()
-	print("toc")
 	docontent()
-	print("content")
 	dotocncx()
-	print("toc.ncx")
 	
-bookInfo = []
+# bookInfo = []
+title = ""
+bookDir = ""
+authorFirst = "" 
+authorLast = ""
 chapters = []
 main() # run the program
 
