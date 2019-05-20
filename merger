@@ -8,12 +8,24 @@
 #
 # merger
 # 
-# This is a simple program to show how we can process lines in a file
-# So we're dealing with lists, loops, and commandline arguments
 #
-import sys # imports the system library - this is for commandlines
-import os  # imports the os level library - this is for file operations
+import sys, os, getopt
 from shutil import copytree, rmtree, copyfile
+
+# Variable declarations
+title = ""
+bookDir = ""
+authorFirst = "" 
+authorLast = ""
+chapters = []
+startChapter = "<!-- Start: "
+chapterFile = "<!-- File: "
+endChapter = "<!-- End: -->"
+idTag = "[ID]"
+titleTag = "[TITLE]"
+bodyTag = "[BODY]"
+searchAuthor = "Firstname Lastname"
+force = False
 
 def replace(search, result, line):
 	# I do this several times in the code, so hey, mod it!
@@ -62,19 +74,22 @@ def doBookInfo(filepath):
 	bookInfo = [title, bookDir, authorFirst, authorLast]
 	
 	if os.path.isdir(bookDir):
-		rmtree(bookDir)
+		print("Destination directory " + bookDir + " exists!")
+		if force:
+			print("Overwriting with -f flag.")
+			rmtree(bookDir)
+		else:
+			print("(use the -f flag to force  in future)")
+			response = input("Do you want to delete it? (y/n) ")
+			if response == 'y' or response == 'Y':
+				rmtree(bookDir)
+			else:
+				exit()
 	copytree("source/book", bookDir)
 	copyfile("style.css", bookDir + "/OEBPS/Styles/style.css")
 
 def dochapters(filepath):
 	global chapters
-	startChapter = "<!-- Start: "
-	chapterFile = "<!-- File: "
-	endFile = "<!-- End: -->"
-	idTag = "[ID]"
-	titleTag = "[TITLE]"
-	bodyTag = "[BODY]"
-	searchAuthor = "Firstname Lastname"
 	with open(filepath) as fp:
 		for line in fp: # this is going to let me look at every line in the file
 			if line.find(startChapter) > -1:         # if I found something, found will be > 0
@@ -97,7 +112,7 @@ def dochapters(filepath):
 							else:
 								if templine.find(bodyTag) > -1:
 									nextline = fp.readline()
-									while nextline.find(endFile) == -1:
+									while nextline.find(endChapter) == -1:
 										writeFile.write(nextline)
 										nextline = fp.readline()
 									templine = ""
@@ -118,32 +133,23 @@ def dochapters(filepath):
 def dotocxhtml():
 	tocFile = "source/blanktoc.xhtml"
 	tocOutFile = bookDir + "/OEBPS/Text/toc.xhtml"
-	titleSearch = "[TITLE]"
 	firstnameSearch = "Firstname"
 	lastnameSearch = "Lastname"
-	firstname = authorFirst
-	lastname = authorLast
 	tocOut = open(tocOutFile, 'w')
 	with open(tocFile) as toc:
 		for line in toc:
 			if line == "[TOC]\n":
+				line = ""
 				for each in chapters:
 					tocOut.write("\t\t<li><a href=\"../" + each[1] + "\"><span>" + each[0] + "</span></a></li>\n")
-			elif line.find(titleSearch) > -1:
-				newline = line[0:line.find(titleSearch)] + title + line[line.find(titleSearch)+len(titleSearch):]
-				tocOut.write(newline)
+			elif line.find(titleTag) > -1:
+				line = line[0:line.find(titleTag)] + title + line[line.find(titleTag)+len(titleTag):]
 			elif line.find(firstnameSearch) > -1:
-				newline = ""
-				splitline = line.split()
-				for word in splitline:
-					if word == firstnameSearch:
-						word = firstname
-					elif word == lastnameSearch:
-						word = lastname
-					newline += (word + " ")
-				tocOut.write(newline)
-			else:
-				tocOut.write(line)
+				line = replace(firstnameSearch, authorFirst, line)
+				line = replace(firstnameSearch, authorFirst, line)
+				line = replace(lastnameSearch, authorLast, line)
+				line = replace(lastnameSearch, authorLast, line)
+			tocOut.write(line)
 	chapters.insert(0,["Table of Contents", "Text/toc.xhtml", "toc"])
 	tocOut.close()
 					
@@ -188,17 +194,22 @@ def dotocncx():
 				tocOut.write(line)
 	tocOut.close()
 	
-def main():
-# This is the main loop
-	if len(sys.argv) < 2:
-	# sys.argv will return the commandline the program was called with.
-	# the element at 0 is the name of the program called
-	# the element at 1 we expect to be the path to a filename
-	# if you didn't give us an argument, tell them and quit
-		print("No filename included: Exiting...")
-		exit()
-	filepath = sys.argv[1]
-	# ok, grab that first argument
+def main(argv):
+	global force
+	filepath = ''
+	try:
+		opts, args = getopt.getopt(argv, "h:i:f")
+	except getopt.GetoptError:
+		print("merger -i <inputfile> [-f]")
+		exit(2)
+	for opt, arg in opts:
+		if opt == "-h":
+			print("merger -i <inputfile> [-f]")
+			exit()
+		if opt in ("-i"):
+			filepath = arg
+		elif opt in ("-f"):
+			force = True
 	if not os.path.isfile(filepath):
 	# does the file exist?
 		print("File path {} does not exist. Exiting...".format(filepath))
@@ -210,12 +221,9 @@ def main():
 	docontent()
 	dotocncx()
 	
-# bookInfo = []
-title = ""
-bookDir = ""
-authorFirst = "" 
-authorLast = ""
-chapters = []
-main() # run the program
+
+
+
+main(sys.argv[1:]) # run the program
 
 	
