@@ -11,12 +11,21 @@
 #
 import sys, os, getopt
 from shutil import copytree, rmtree, copyfile
+# from datetime import now
+
+import datetime
+
+today = datetime.datetime.now()
 
 # Variable declarations
 title = ""
 bookDir = ""
 authorFirst = "" 
 authorLast = ""
+editorFirst = ""
+editorLast = ""
+coverFirst = ""
+coverLast = ""
 chapters = []
 startChapter = "<!-- Start: "
 chapterFile = "<!-- File: "
@@ -24,8 +33,11 @@ endChapter = "<!-- End: -->"
 idTag = "[ID]"
 titleTag = "[TITLE]"
 bodyTag = "[BODY]"
-searchAuthor = "Firstname Lastname"
+firstnameSearch = "Firstname"
+lastnameSearch = "Lastname"
 force = False
+current = datetime.datetime.now()
+today = str(current.year) + "-" + str(current.month) + "-" + str(current.day)
 
 def replace(search, result, line):
 	# I do this several times in the code, so hey, mod it!
@@ -46,21 +58,36 @@ def doBookInfo(filepath):
 	global bookDir
 	global authorFirst
 	global authorLast
+	global editorFirst
+	global editorLast
+	global coverFirst
+	global coverLast
+	findTitle = "<!-- Title: "
+	findBookDir = "<!-- BookDir: "
+	findAuthorFirst = "<!-- AuthorFirst: "
+	findAuthorLast = "<!-- AuthorLast: "
+	findEditorFirst = "<!-- EditorFirst: "
+	findEditorLast = "<!-- EditorLast: "
+	findCoverFirst = "<!-- CoverFirst: "
+	findCoverLast =  "<!-- CoverLast: "
 	with open(filepath) as fp:
 		for line in fp:
-			findTitle = "<!-- Title: "
-			findBookDir = "<!-- BookDir: "
-			findAuthorFirst = "<!-- AuthorFirst: "
-			findAuthorLast = "<!-- AuthorLast: "
-			if line.find(findTitle) > -1:
+			if findTitle in line:
 				title = extract(findTitle, line)
-			elif line.find(findBookDir) > -1:
+			elif findBookDir in line:
 				bookDir = extract(findBookDir, line)
-			elif line.find(findAuthorFirst) > -1:
+			elif findAuthorFirst in line:
 				authorFirst = extract(findAuthorFirst, line)
-			elif line.find(findAuthorLast) > -1:
+			elif findAuthorLast in line:
 				authorLast = extract(findAuthorLast, line)
-	bookInfo = [title, bookDir, authorFirst, authorLast]
+			elif findEditorFirst in line:
+				editorFirst = extract(findEditorFirst, line)
+			elif findEditorLast in line:
+				editorLast = extract(findEditorLast, line)
+			elif findCoverFirst in line:
+				coverFirst = extract(findCoverFirst, line)
+			elif findCoverLast in line:
+				coverLast = extract(findCoverLast, line)				
 	
 	if os.path.isdir(bookDir):
 		print("Destination directory " + bookDir + " exists!")
@@ -92,14 +119,14 @@ def dochapters(filepath):
 					templatefile = "source/blankchapter.xhtml"
 					with open(templatefile) as template:
 						for templine in template:
-							if templine.find(idTag) > -1:
+							if idTag in templine:
 								found = templine.find(idTag)
 								templine = templine[0:found] + chapterID + templine[found+4:]
-							elif templine.find(titleTag) > -1:
+							elif titleTag in templine:
 								found = templine.find(titleTag)
 								templine = templine[0:found] + chapterHead + templine[found+7:]
 							else:
-								if templine.find(bodyTag) > -1:
+								if bodyTag in templine:
 									nextline = fp.readline()
 									while nextline.find(endChapter) == -1:
 										writeFile.write(nextline)
@@ -112,28 +139,26 @@ def dochapters(filepath):
 		wf = open(coverDestination, 'w')
 		with open(coverFile) as cover:
 			for line in cover:
-				if line.find(titleTag) > -1:
+				if titleTag in line:
 					line = replace(titleTag, title, line)
-				elif line.find(searchAuthor) > -1:
-					line = replace(searchAuthor, authorFirst + " " + authorLast, line)
+				elif firstnameSearch + " " + lastnameSearch in line:
+					line = replace(firstnameSearch + " " + lastnameSearch, authorFirst + " " + authorLast, line)
 				wf.write(line)
 		wf.close()
 	
 def dotocxhtml():
 	tocFile = "source/blanktoc.xhtml"
 	tocOutFile = bookDir + "/OEBPS/Text/toc.xhtml"
-	firstnameSearch = "Firstname"
-	lastnameSearch = "Lastname"
 	tocOut = open(tocOutFile, 'w')
 	with open(tocFile) as toc:
 		for line in toc:
-			if line == "[TOC]\n":
+			if "[TOC]" in line:
 				line = ""
 				for each in chapters:
 					tocOut.write("\t\t<li><a href=\"../" + each[1] + "\"><span>" + each[0] + "</span></a></li>\n")
-			elif line.find(titleTag) > -1:
+			elif titleTag in line:
 				line = line[0:line.find(titleTag)] + title + line[line.find(titleTag)+len(titleTag):]
-			elif line.find(firstnameSearch) > -1:
+			elif firstnameSearch in line:
 				line = replace(firstnameSearch, authorFirst, line)
 				line = replace(firstnameSearch, authorFirst, line)
 				line = replace(lastnameSearch, authorLast, line)
@@ -148,19 +173,39 @@ def docontent():
 	contentOut = open(contentOutFile, 'w')
 	with open(contentFile) as content:
 		for line in content:
-			if line == "[MANIFEST]\n":
+			if "[MANIFEST]" in line:
 				for each in chapters:
-					contentOut.write("\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n")
-			elif line == "[SPINE]\n":
+					line = "\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n"
+					# contentOut.write("\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n")
+			elif "[SPINE]" in line:
 				for each in chapters:
-					contentOut.write("\t<itemref idref=\"" + each[2] + "\" />\n")
-			elif line == "[GUIDE]\n":
+					line = "\t<itemref idref=\"" + each[2] + "\" />\n"
+					# contentOut.write("\t<itemref idref=\"" + each[2] + "\" />\n")
+			elif "[GUIDE]" in line:
 				for each in chapters:
-					contentOut.write("\t<reference href=\"" + each [1] + "\" type=\"text\" />\n")
-			elif line.find("[TITLE]") > -1:
-				contentOut.write(line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):])
-			else:
-				contentOut.write(line)
+					line = "\t<reference href=\"" + each [1] + "\" type=\"text\" />\n"
+					# contentOut.write("\t<reference href=\"" + each [1] + "\" type=\"text\" />\n")
+			elif "[TITLE]" in line:
+				# contentOut.write(line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):])
+				line = line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):]
+			elif "role=\"aut\"" in line:
+				line = replace(firstnameSearch, authorFirst, line)
+				line = replace(lastnameSearch, authorLast, line)
+				line = replace(firstnameSearch, authorFirst, line)
+				line = replace(lastnameSearch, authorLast, line)
+			elif "role=\"edt\"":
+				line = replace(firstnameSearch, editorFirst, line)
+				line = replace(lastnameSearch, editorLast, line)
+				line = replace(firstnameSearch, editorFirst, line)
+				line = replace(lastnameSearch, editorLast, line)
+			elif "role=\"cov\"" in line:
+				line = replace(firstnameSearch, coverFirst, line)
+				line = replace(lastnameSearch, coverLast, line)
+				line = replace(firstnameSearch, coverFirst, line)
+				line = replace(lastnameSearch, coverLast, line)
+			elif "date opf:event=\"publication\"" in line:
+				line = replace("2000-01-01", today, line)
+			contentOut.write(line)
 	contentOut.close()
 	
 def dotocncx():
@@ -169,7 +214,7 @@ def dotocncx():
 	tocOut = open(tocOut, 'w')
 	with open(tocFile) as toc:
 		for line in toc:
-			if line == "[NCX]\n":
+			if "[NCX]" in line:
 				point = 2
 				for each in chapters:
 					tocOut.write("\t<navPoint id =\"" + each[2] + "\" playOrder=\"" + str(point) + "\">\n")
