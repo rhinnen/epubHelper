@@ -11,11 +11,7 @@
 #
 import sys, os, getopt
 from shutil import copytree, rmtree, copyfile
-# from datetime import now
-
-import datetime
-
-today = datetime.datetime.now()
+from datetime import datetime.now
 
 # Variable declarations
 title = ""
@@ -27,17 +23,11 @@ editorLast = ""
 coverFirst = ""
 coverLast = ""
 chapters = []
-startChapter = "<!-- Start: "
-chapterFile = "<!-- File: "
-endChapter = "<!-- End: -->"
-idTag = "[ID]"
 titleTag = "[TITLE]"
-bodyTag = "[BODY]"
 firstnameSearch = "Firstname"
 lastnameSearch = "Lastname"
 force = False
-current = datetime.datetime.now()
-today = str(current.year) + "-" + str(current.month) + "-" + str(current.day)
+today = str(datetime.now().year) + "-" + str(datetime.now().month) + "-" + str(datetime.now().day)
 
 def replace(search, result, line):
 	# I do this several times in the code, so hey, mod it!
@@ -49,7 +39,7 @@ def replace(search, result, line):
 	
 def extract(search, line):
 	# returns the juicy data, without the cruft
-	if line.find(search) > -1:
+	if search in line:
 		return line[line.find(search) + len(search):-len(" -->\n")] # these lines should always end " -->\n"
 
 def doBookInfo(filepath):
@@ -105,13 +95,18 @@ def doBookInfo(filepath):
 	copyfile("style.css", bookDir + "/OEBPS/Styles/style.css")
 
 def dochapters(filepath):
+	idTag = "[ID]"
+	bodyTag = "[BODY]"
+	startChapter = "<!-- Start: "
+	chapterFile = "<!-- File: "
+	endChapter = "<!-- End: -->"
 	global chapters
 	with open(filepath) as fp:
 		for line in fp: # this is going to let me look at every line in the file
-			if line.find(startChapter) > -1:         # if I found something, found will be > 0
+			if startChapter in line:         # if I found something, found will be > 0
 				chapterHead = extract(startChapter, line)  # great, get the string
 				line = fp.readline()   # read the next line of the original file
-				if line.find(chapterFile) > -1: 
+				if chapterFile in line: 
 					filename = extract(chapterFile, line).split()[0]
 					chapterID = extract(chapterFile, line).split()[1]
 					chapters.append([chapterHead, "Text/" + filename, chapterID])  
