@@ -11,7 +11,7 @@
 #
 import sys, os, getopt
 from shutil import copytree, rmtree, copyfile
-from datetime import datetime.now
+from datetime import datetime
 
 # Variable declarations
 title = ""
@@ -40,7 +40,8 @@ def replace(search, result, line):
 def extract(search, line):
 	# returns the juicy data, without the cruft
 	if search in line:
-		return line[line.find(search) + len(search):-len(" -->\n")] # these lines should always end " -->\n"
+		endPoint = line.find(" -->") # these lines should always end " -->"
+		return line[line.find(search) + len(search):endPoint]
 
 def doBookInfo(filepath):
 	# global bookInfo
@@ -80,9 +81,9 @@ def doBookInfo(filepath):
 				coverLast = extract(findCoverLast, line)				
 	
 	if os.path.isdir(bookDir):
-		print("Destination directory " + bookDir + " exists!")
+		print("Destination directory " + bookDir + " exists.")
 		if force:
-			print("Overwriting with -f flag.")
+			print("Overwriting with -f (force) flag.")
 			rmtree(bookDir)
 		else:
 			print("(use the -f flag to force  in future)")
@@ -115,11 +116,9 @@ def dochapters(filepath):
 					with open(templatefile) as template:
 						for templine in template:
 							if idTag in templine:
-								found = templine.find(idTag)
-								templine = templine[0:found] + chapterID + templine[found+4:]
+								templine = replace(idTag, chapterID, templine)
 							elif titleTag in templine:
-								found = templine.find(titleTag)
-								templine = templine[0:found] + chapterHead + templine[found+7:]
+								templine = replace(titleTag, chapterHead, templine)
 							else:
 								if bodyTag in templine:
 									nextline = fp.readline()
@@ -150,9 +149,9 @@ def dotocxhtml():
 			if "[TOC]" in line:
 				line = ""
 				for each in chapters:
-					tocOut.write("\t\t<li><a href=\"../" + each[1] + "\"><span>" + each[0] + "</span></a></li>\n")
+					line += "\t\t<li><a href=\"../" + each[1] + "\"><span>" + each[0] + "</span></a></li>\n" 
 			elif titleTag in line:
-				line = line[0:line.find(titleTag)] + title + line[line.find(titleTag)+len(titleTag):]
+				line = replace(titleTag, title, line)
 			elif firstnameSearch in line:
 				line = replace(firstnameSearch, authorFirst, line)
 				line = replace(firstnameSearch, authorFirst, line)
@@ -170,18 +169,14 @@ def docontent():
 		for line in content:
 			if "[MANIFEST]" in line:
 				for each in chapters:
-					line = "\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n"
-					# contentOut.write("\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n")
+					line += "\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n"
 			elif "[SPINE]" in line:
 				for each in chapters:
 					line = "\t<itemref idref=\"" + each[2] + "\" />\n"
-					# contentOut.write("\t<itemref idref=\"" + each[2] + "\" />\n")
 			elif "[GUIDE]" in line:
 				for each in chapters:
 					line = "\t<reference href=\"" + each [1] + "\" type=\"text\" />\n"
-					# contentOut.write("\t<reference href=\"" + each [1] + "\" type=\"text\" />\n")
 			elif "[TITLE]" in line:
-				# contentOut.write(line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):])
 				line = line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):]
 			elif "role=\"aut\"" in line:
 				line = replace(firstnameSearch, authorFirst, line)
