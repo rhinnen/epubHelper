@@ -168,16 +168,21 @@ def docontent():
 	with open(contentFile) as content:
 		for line in content:
 			if "[MANIFEST]" in line:
+				line = ""
 				for each in chapters:
 					line += "\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n"
 			elif "[SPINE]" in line:
+				line = ""
 				for each in chapters:
-					line = "\t<itemref idref=\"" + each[2] + "\" />\n"
+					line += "\t<itemref idref=\"" + each[2] + "\" />\n"
 			elif "[GUIDE]" in line:
+				line = ""
 				for each in chapters:
-					line = "\t<reference href=\"" + each [1] + "\" type=\"text\" />\n"
+					line += "\t<reference href=\"" + each [1] + "\" type=\"text\" />\n"
 			elif "[TITLE]" in line:
+				line = ""
 				line = line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):]
+				print(line)
 			elif "role=\"aut\"" in line:
 				line = replace(firstnameSearch, authorFirst, line)
 				line = replace(lastnameSearch, authorLast, line)
