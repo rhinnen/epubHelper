@@ -8,6 +8,7 @@
 #
 # merger
 # 
+# TO DO: Make it read images and update content appropriately
 #
 import sys, os, getopt
 from shutil import copytree, rmtree, copyfile
