@@ -8,7 +8,6 @@
 #
 # merger
 # 
-# TO DO: Make it read images and update content appropriately
 #
 import sys, os, getopt
 from shutil import copytree, rmtree, copyfile
@@ -24,6 +23,7 @@ editorLast = ""
 coverFirst = ""
 coverLast = ""
 chapters = []
+images = []
 titleTag = "[TITLE]"
 firstnameSearch = "Firstname"
 lastnameSearch = "Lastname"
@@ -99,6 +99,8 @@ def doBookInfo(filepath):
 def dochapters(filepath):
 	idTag = "[ID]"
 	bodyTag = "[BODY]"
+	imageID = "<a id=\"image\">"
+	imageTag = "<img src="
 	startChapter = "<!-- Start: "
 	chapterFile = "<!-- File: "
 	endChapter = "<!-- End: -->"
@@ -124,6 +126,20 @@ def dochapters(filepath):
 								if bodyTag in templine:
 									nextline = fp.readline()
 									while nextline.find(endChapter) == -1:
+										if imageID in nextline:
+											nextline = "<a id=\"image-" + str(len(images) + 1) + "\"><!-- Anchor --></a>"
+										elif imageTag in nextline:
+											firstCharImage = nextline.find('/') + 1
+											lastHalfOfLine = nextline[firstCharImage:]
+											lastCharImage = nextline[firstCharImage:].find('"')
+											imageName = nextline[firstCharImage:lastCharImage+firstCharImage]
+											images.append(imageName)
+											firstHalfOfLine = nextline[nextline.find("\"")+1:]
+											nextline = "<img src=\"../Images/" +  imageName + nextline[nextline.find(imageName)+len(imageName):]
+											pathToImage = firstHalfOfLine[:firstHalfOfLine.find("\"")]
+											print(pathToImage)
+											print(filepath[:filepath.rfind("/")] + "/" + pathToImage)
+											copyfile(filepath[:filepath.rfind("/")] + "/" + pathToImage, bookDir + "/OEBPS/Images/" + imageName)
 										writeFile.write(nextline)
 										nextline = fp.readline()
 									templine = ""
@@ -172,6 +188,10 @@ def docontent():
 				line = ""
 				for each in chapters:
 					line += "\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n"
+				count = 1
+				for each in images:
+					line += "\t<item href=\"Images/" + each + "\" id=\"image-" + str(count) + "\" media-type=\"image/jpeg\" />\n"
+					count += 1
 			elif "[SPINE]" in line:
 				line = ""
 				for each in chapters:
@@ -181,7 +201,6 @@ def docontent():
 				for each in chapters:
 					line += "\t<reference href=\"" + each [1] + "\" type=\"text\" />\n"
 			elif "[TITLE]" in line:
-				line = ""
 				line = line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):]
 				print(line)
 			elif "role=\"aut\"" in line:
