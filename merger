@@ -1,4 +1,4 @@
-#!/Library/Frameworks/Python.framework/Versions/3.7/bin/python3
+#!/usr/local/bin/python3
 #
 # (That line is included so we don't have to launch the program
 # as 'python <program>', we can just run it directly on the commandline.
@@ -11,21 +11,45 @@
 #
 import sys, os, getopt
 from shutil import copytree, rmtree, copyfile
-from datetime import datetime.now
+from datetime import datetime
 
 # Variable declarations
-title = ""
-bookDir = ""
-authorFirst = "" 
-authorLast = ""
-editorFirst = ""
-editorLast = ""
-coverFirst = ""
-coverLast = ""
+# global bookInfo
+# If I don't define these at some point, doContent may fail if all of those fields
+# aren't declared in the file. So it seems reasonable to declare these in the beginning
+# especially since they are "global" and have significance throughout the program. They 
+# are now at least initialized into a known state.
+global title 
+global bookDir
+global authorFirst
+global authorLast
+global editorFirst
+global editorLast
+global coverFirst
+global coverLast
+global subjects
+global publisher
+global copyright
+global force
+
+title = "Temporary"
+bookDir = "test"
+authorFirst = "First"
+authorLast = "Last"
+editorFirst = "First"
+editorLast = "Last"
+coverFirst = "First"
+coverLast = "Last"
+subjects = "Subject"
+publisher = "Publisher"
+copyright = "Copyright"
+force = False
+
 chapters = []
+images = []
 titleTag = "[TITLE]"
-firstnameSearch = "Firstname"
-lastnameSearch = "Lastname"
+styleStart = "<style>"
+styleEnd = "</style>"
 force = False
 today = str(datetime.now().year) + "-" + str(datetime.now().month) + "-" + str(datetime.now().day)
 
@@ -40,18 +64,11 @@ def replace(search, result, line):
 def extract(search, line):
 	# returns the juicy data, without the cruft
 	if search in line:
-		return line[line.find(search) + len(search):-len(" -->\n")] # these lines should always end " -->\n"
-
+		endPoint = line.find(" -->") # these lines should always end " -->"
+		return line[line.find(search) + len(search):endPoint]
+	
 def doBookInfo(filepath):
-	# global bookInfo
-	global title
-	global bookDir
-	global authorFirst
-	global authorLast
-	global editorFirst
-	global editorLast
-	global coverFirst
-	global coverLast
+	
 	findTitle = "<!-- Title: "
 	findBookDir = "<!-- BookDir: "
 	findAuthorFirst = "<!-- AuthorFirst: "
@@ -60,12 +77,29 @@ def doBookInfo(filepath):
 	findEditorLast = "<!-- EditorLast: "
 	findCoverFirst = "<!-- CoverFirst: "
 	findCoverLast =  "<!-- CoverLast: "
+	findSubjects = "<!-- Subjects: "
+	findPublisher = "<!-- Publisher: "
+	findCopyright = "<!-- Copyright: "
+	
+	global title
+	global bookDir
+	global authorFirst
+	global authorLast
+	global editorFirst
+	global editorLast
+	global coverFirst
+	global coverLast
+	global subjects
+	global publisher
+	global copyright
+
 	with open(filepath) as fp:
 		for line in fp:
 			if findTitle in line:
 				title = extract(findTitle, line)
 			elif findBookDir in line:
 				bookDir = extract(findBookDir, line)
+				print(bookDir)
 			elif findAuthorFirst in line:
 				authorFirst = extract(findAuthorFirst, line)
 			elif findAuthorLast in line:
@@ -77,7 +111,14 @@ def doBookInfo(filepath):
 			elif findCoverFirst in line:
 				coverFirst = extract(findCoverFirst, line)
 			elif findCoverLast in line:
-				coverLast = extract(findCoverLast, line)				
+				coverLast = extract(findCoverLast, line)
+			elif findSubjects in line:
+				subjects = extract(findSubjects, line)
+			elif findPublisher in line:
+				publisher = extract(findPublisher, line)
+			elif findCopyright in line:
+				copyright = extract(findCopyright, line)
+							
 	
 	if os.path.isdir(bookDir):
 		print("Destination directory " + bookDir + " exists!")
@@ -92,14 +133,21 @@ def doBookInfo(filepath):
 			else:
 				exit()
 	copytree("source/book", bookDir)
-	copyfile("style.css", bookDir + "/OEBPS/Styles/style.css")
+	# copyfile("style.css", bookDir + "/OEBPS/Styles/style.css")
 
 def dochapters(filepath):
 	idTag = "[ID]"
 	bodyTag = "[BODY]"
+	imageID = "<a id=\"image\">"
+	imageTag = "<img src="
 	startChapter = "<!-- Start: "
 	chapterFile = "<!-- File: "
 	endChapter = "<!-- End: -->"
+	startStyle = "<style>"
+	endStyle = "</style>"
+	firstnameSearch = "Firstname"
+	lastnameSearch = "Lastname"
+
 	global chapters
 	with open(filepath) as fp:
 		for line in fp: # this is going to let me look at every line in the file
@@ -115,20 +163,40 @@ def dochapters(filepath):
 					with open(templatefile) as template:
 						for templine in template:
 							if idTag in templine:
-								found = templine.find(idTag)
-								templine = templine[0:found] + chapterID + templine[found+4:]
+								templine = replace(idTag, chapterID, templine)
 							elif titleTag in templine:
-								found = templine.find(titleTag)
-								templine = templine[0:found] + chapterHead + templine[found+7:]
+								templine = replace(titleTag, chapterHead, templine)
 							else:
 								if bodyTag in templine:
 									nextline = fp.readline()
 									while nextline.find(endChapter) == -1:
+										if imageID in nextline:
+											nextline = "<a id=\"image-" + str(len(images) + 1) + "\"><!-- Anchor --></a>"
+										elif imageTag in nextline:
+											firstCharImage = nextline.find('/') + 1
+											lastHalfOfLine = nextline[firstCharImage:]
+											lastCharImage = nextline[firstCharImage:].find('"')
+											imageName = nextline[firstCharImage:lastCharImage+firstCharImage]
+											images.append(imageName)
+											firstHalfOfLine = nextline[nextline.find("\"")+1:]
+											nextline = "<img src=\"../Images/" +  imageName + nextline[nextline.find(imageName)+len(imageName):]
+											pathToImage = firstHalfOfLine[:firstHalfOfLine.find("\"")]
+											copyfile(filepath[:filepath.rfind("/")] + "/" + pathToImage, bookDir + "/OEBPS/Images/" + imageName)
 										writeFile.write(nextline)
 										nextline = fp.readline()
 									templine = ""
 							writeFile.write(templine)
 					writeFile.close()      # close the write file
+					print("done chapter")
+			elif startStyle in line:
+				writeFile = open(bookDir + "/OEBPS/Styles/style.css", 'w')
+				nextline = fp.readline()
+				while nextline.find(endStyle) == -1:
+					writeFile.write(nextline)
+					nextline = fp.readline()
+				writeFile.close()
+				
+			
 		coverFile = "source/blankcover.xhtml"
 		coverDestination = bookDir + "/OEBPS/Text/cover.xhtml"
 		wf = open(coverDestination, 'w')
@@ -142,6 +210,8 @@ def dochapters(filepath):
 		wf.close()
 	
 def dotocxhtml():
+	firstnameSearch = "Firstname"
+	lastnameSearch = "Lastname"
 	tocFile = "source/blanktoc.xhtml"
 	tocOutFile = bookDir + "/OEBPS/Text/toc.xhtml"
 	tocOut = open(tocOutFile, 'w')
@@ -150,9 +220,9 @@ def dotocxhtml():
 			if "[TOC]" in line:
 				line = ""
 				for each in chapters:
-					tocOut.write("\t\t<li><a href=\"../" + each[1] + "\"><span>" + each[0] + "</span></a></li>\n")
+					line += "\t\t<li><a href=\"../" + each[1] + "\"><span>" + each[0] + "</span></a></li>\n" 
 			elif titleTag in line:
-				line = line[0:line.find(titleTag)] + title + line[line.find(titleTag)+len(titleTag):]
+				line = replace(titleTag, title, line)
 			elif firstnameSearch in line:
 				line = replace(firstnameSearch, authorFirst, line)
 				line = replace(firstnameSearch, authorFirst, line)
@@ -162,27 +232,41 @@ def dotocxhtml():
 	chapters.insert(0,["Table of Contents", "Text/toc.xhtml", "toc"])
 	tocOut.close()
 					
-def docontent():	
+def docontent(filepath):	
+	firstnameSearch = "Firstname"
+	lastnameSearch = "Lastname"
 	contentFile = "source/blankcontent.opf"
 	contentOutFile = bookDir + "/OEBPS/content.opf"
+	cover = "[COVER]"
 	contentOut = open(contentOutFile, 'w')
 	with open(contentFile) as content:
 		for line in content:
 			if "[MANIFEST]" in line:
+				line = ""
 				for each in chapters:
-					line = "\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n"
-					# contentOut.write("\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n")
+					line += "\t<item href=\"" + each[1] + "\" id=\"" + each[2] + "\" media-type=\"application/xhtml+xml\" />\n"
+				count = 1
+				for each in images:
+					line += "\t<item href=\"Images/" + each + "\" id=\"image-" + str(count) + "\" media-type=\"image/jpeg\" />\n"
+					count += 1
 			elif "[SPINE]" in line:
+				line = ""
 				for each in chapters:
-					line = "\t<itemref idref=\"" + each[2] + "\" />\n"
-					# contentOut.write("\t<itemref idref=\"" + each[2] + "\" />\n")
+					line += "\t<itemref idref=\"" + each[2] + "\" />\n"
 			elif "[GUIDE]" in line:
+				line = ""
 				for each in chapters:
-					line = "\t<reference href=\"" + each [1] + "\" type=\"text\" />\n"
-					# contentOut.write("\t<reference href=\"" + each [1] + "\" type=\"text\" />\n")
+					line += "\t<reference href=\"" + each [1] + "\" type=\"text\" />\n"
 			elif "[TITLE]" in line:
-				# contentOut.write(line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):])
 				line = line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):]
+			elif "[SUBJECTS]" in line:
+				line = line[0:line.find("[SUBJECTS]")] + subjects + line[line.find("[SUBJECTS]") + len("[SUBJECTS]"):]
+			elif "[PUBLISHER]" in line:
+				line = line[0:line.find("[PUBLISHER]")] + publisher + line[line.find("[PUBLISHER]") + len("[PUBLISHER]"):]
+			elif "[COPYRIGHT]" in line:
+				line = line[0:line.find("[COPYRIGHT]")] + copyright + line[line.find("[COPYRIGHT]") + len("[COPYRIGHT]"):]
+			elif "date opf:event=\"publication\"" in line:
+				line = replace("2000-01-01", today, line)
 			elif "role=\"aut\"" in line:
 				line = replace(firstnameSearch, authorFirst, line)
 				line = replace(lastnameSearch, authorLast, line)
@@ -198,8 +282,17 @@ def docontent():
 				line = replace(lastnameSearch, coverLast, line)
 				line = replace(firstnameSearch, coverFirst, line)
 				line = replace(lastnameSearch, coverLast, line)
-			elif "date opf:event=\"publication\"" in line:
-				line = replace("2000-01-01", today, line)
+			# elif "[COVER]" in line:
+			    # print("found cover")
+				#coverpath = filepath[:filepath.rfind("/")] + "/cover.jpg"
+				#print(coverpath)
+				# if os.path.isfile(coverpath):
+				#	line =  '    <meta name="cover" content="Images/cover.jpg" />'
+				#	copyfile(coverpath, bookDir + "/OEBPS/Images/cover.jpg")
+				#else:
+				#	line = '	<!-- <meta name="cover" content="Images/cover.jpg" />'
+
+
 			contentOut.write(line)
 	contentOut.close()
 	
@@ -223,32 +316,47 @@ def dotocncx():
 				tocOut.write(line)
 	tocOut.close()
 	
+
+	
 def main(argv):
-	global force
+	
 	filepath = ''
 	try:
-		opts, args = getopt.getopt(argv, "h:i:f")
+		opts, args = getopt.getopt(argv, ":hf")
 	except getopt.GetoptError:
-		print("merger -i <inputfile> [-f]")
+		print("merger <inputfile> [-f]")
 		exit(2)
-	for opt, arg in opts:
-		if opt == "-h":
-			print("merger -i <inputfile> [-f]")
+	
+	print(args)
+	for opt, args in opts:
+		if opt in ("-h"):
+			print("got -h")
+			print("merger <inputfile> [-f]")
+			print("-i: Input HTML file that we are using as a source")
+			print("-f: if the destination directory exists, force a delete before generating the new one")
 			exit()
-		if opt in ("-i"):
-			filepath = arg
-		elif opt in ("-f"):
+		if opt in ("-f"):
 			force = True
+
+	filepath = str(args[0])
+	
+	print(args)
 	if not os.path.isfile(filepath):
 	# does the file exist?
 		print("File path {} does not exist. Exiting...".format(filepath))
 		# if it doesn't, tell the user and quit
 		exit()
 	doBookInfo(filepath)
+	print("done BookInfo")
 	dochapters(filepath)
+	print("done dochapters")
 	dotocxhtml()
-	docontent()
+	print("done toc xhtml")
+	docontent(filepath)
+	print("done content")
 	dotocncx()
+	print("done toc ncx")
+
 	
 
 

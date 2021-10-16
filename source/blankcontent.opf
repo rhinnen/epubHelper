@@ -5,7 +5,7 @@
     <!-- ISBN -->
     <dc:identifier id="bookid" opf:scheme="ISBN">urn:isbn:[ISBN]</dc:identifier>
     <dc:title>[TITLE]</dc:title>
-    <dc:rights>Copyright © 2019 [COPYRIGHT]. All rights reserved.</dc:rights>
+    <dc:rights>[COPYRIGHT]</dc:rights>
 
     <!-- BISAC Subject Headings List: http://bisg.org/?page=BISACFaQ -->
     <dc:subject>[SUBJECTS]</dc:subject>
@@ -65,8 +65,6 @@
     <item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml" />
     <item href="Styles/style.css" id="css" media-type="text/css" />
 [MANIFEST]
-    <item href="Images/image-01.jpg" id="image-01" media-type="image/jpeg" />
-    <item href="Images/image-02.png" id="image-02" media-type="image/png" />
     <item href="Styles/MgOpenModataRegular.ttf" id="mgopenmodataregular" media-type="application/font-sfnt" />
     <item href="Styles/invisible1.ttf" id="invisible1" media-type="application/font-sfnt" />
     <item href="Styles/Inconsolata-Regular.otf" id="inconsolate" media-type="application/font-sfnt" />
