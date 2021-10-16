@@ -15,10 +15,10 @@ from datetime import datetime
 
 # Variable declarations
 # global bookInfo
-# If I don't define these at some point, doContent may fail if all of those fields
-# aren't declared in the file. So it seems reasonable to declare these in the beginning
-# especially since they are "global" and have significance throughout the program. They 
-# are now at least initialized into a known state.
+# If I don't define these at some point, doContent may fail if all of those 
+# fields aren't declared in the file. So it seems reasonable to declare these in 
+# the beginning especially since they are "global" and have significance
+# throughout the program. They are now at least initialized into a known state.
 global title 
 global bookDir
 global authorFirst
@@ -151,14 +151,17 @@ def dochapters(filepath):
 	global chapters
 	with open(filepath) as fp:
 		for line in fp: # this is going to let me look at every line in the file
-			if startChapter in line:         # if I found something, found will be > 0
-				chapterHead = extract(startChapter, line)  # great, get the string
+			if startChapter in line:         
+			# if I found something, found will be > 0
+				chapterHead = extract(startChapter, line)  
+				# great, get the string
 				line = fp.readline()   # read the next line of the original file
 				if chapterFile in line: 
 					filename = extract(chapterFile, line).split()[0]
 					chapterID = extract(chapterFile, line).split()[1]
 					chapters.append([chapterHead, "Text/" + filename, chapterID])  
-					writeFile = open(bookDir + "/OEBPS/Text/" + filename, 'w') # open it as a file to write
+					writeFile = open(bookDir + "/OEBPS/Text/" + filename, 'w') 
+					# open it as a file to write
 					templatefile = "source/blankchapter.xhtml"
 					with open(templatefile) as template:
 						for templine in template:
@@ -171,7 +174,8 @@ def dochapters(filepath):
 									nextline = fp.readline()
 									while nextline.find(endChapter) == -1:
 										if imageID in nextline:
-											nextline = "<a id=\"image-" + str(len(images) + 1) + "\"><!-- Anchor --></a>"
+											nextline = "<a id=\"image-" + 
+											str(len(images) + 1) + "\"><!-- Anchor --></a>"
 										elif imageTag in nextline:
 											firstCharImage = nextline.find('/') + 1
 											lastHalfOfLine = nextline[firstCharImage:]
@@ -179,7 +183,7 @@ def dochapters(filepath):
 											imageName = nextline[firstCharImage:lastCharImage+firstCharImage]
 											images.append(imageName)
 											firstHalfOfLine = nextline[nextline.find("\"")+1:]
-											nextline = "<img src=\"../Images/" +  imageName + nextline[nextline.find(imageName)+len(imageName):]
+											nextline = "<img src=\"../Images/" + imageName + nextline[nextline.find(imageName)+len(imageName):]
 											pathToImage = firstHalfOfLine[:firstHalfOfLine.find("\"")]
 											copyfile(filepath[:filepath.rfind("/")] + "/" + pathToImage, bookDir + "/OEBPS/Images/" + imageName)
 										writeFile.write(nextline)
