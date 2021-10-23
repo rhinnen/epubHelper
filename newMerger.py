@@ -9,39 +9,19 @@
 # merger
 #
 #
-import sys, os, getopt
-from shutil import copytree, rmtree, copyfile
+import sys, os, getopt 
+from uuid import uuid4
+from shutil import rmtree
 from datetime import datetime
-
-# Variable declarations
-# global bookInfo
-# If I don't define these at some point, doContent may fail if all of those
-# fields aren't declared in the file. So it seems reasonable to declare these in
-# the beginning especially since they are "global" and have significance
-# throughout the program. They are now at least initialized into a known state.
-
-
-
-
-def replace(search, result, line):
-    # I do this several times in the code, so hey, mod it!
-    newline = line
-    found = line.find(search)
-    if found > -1:
-        newline = line[0:found] + result + line[found + len(search):]
-    return newline
-
 
 def findInfo( name ):
     htmlComment = "<!-- "
     trailing = ": "
-
     return htmlComment + name + trailing
 
 
 def extract(search, line):
-
-    # returns the juicy data, without the cruft
+    """returns the juicy data, without the cruft"""
     startPoint = len(search)
     endPoint = line.find(" -->") # these lines should always end " -->"
     return line[startPoint:endPoint]
@@ -56,7 +36,6 @@ class Chapter:
 
 
 class BookInfo:
-
     class Name:
         def __init__(self):
             self.forename = ""
@@ -80,7 +59,6 @@ class BookInfo:
 
 
 def parseBook():
-
     startChapter = "Start"
     endChapter = "End"
     startStyle = "StartStyle"
@@ -101,7 +79,6 @@ def parseBook():
     inStyle = False
 
     with open(info.filepath) as source:
-
         for line in source:
             if findInfo(findTitle) in line:
                 info.title = extract(findInfo(findTitle), line)
@@ -138,17 +115,19 @@ def parseBook():
                     chapter.body = chapter.body + line
                 elif inStyle:
                     info.style = info.style + line
+    if info.uu_id == "":
+        info.uu_id = str(uuid4())
 
 
 def writeStructure():
     mode = 0o775
-
+    print(info.dir)
     if os.path.isfile(info.dir):
         if force:
             shutil.rmtree(info.dir)
-        else:
-            print("Directory exists.")
-            exit()
+    else:
+        print("Directory exists.")
+        exit()
 
     os.mkdir(info.dir, mode)
 
@@ -158,7 +137,6 @@ def writeStructure():
 
 
 def writeMisc():
-    mode = 0o664
     access = 'w'
     file = os.path.join(info.dir, "mimetype")
 
@@ -218,9 +196,8 @@ def writeTOC():
         contents += each
     contents += contentsend
 
-    print(contents)
     toc = open(file, access)
-    toc.write = contents
+    toc.write(contents)
     toc.close()
 
 def writeCover():
@@ -236,11 +213,17 @@ def writeChapters():
 
 
 def writeStyles():
-    pass
+    access = 'w'
+    file = os.path.join(info.dir, "OEBPS", "Styles", "style")
+
+    mimetype = open(file, access)
+    mimetype.write(info.style)
+    mimetype.close()
 
 
 def parseArgs(argv):
 
+    global force
     try:
         opts, args = getopt.getopt(argv, ":hf")
     except getopt.GetoptError:
@@ -261,10 +244,8 @@ def parseArgs(argv):
 
     info.filepath = str(args[0])
 
-    if os.path.isfile(info.filepath):
-        print("Directory {} already exists")
-    else:
-        print("File path {} does not exist. Exiting...".format(filepath))
+    if not os.path.isfile(info.filepath):
+        print("File {} does not exist. Exiting...".format(info.filepath))
         # if it doesn't, tell the user and quit
         exit()
 
