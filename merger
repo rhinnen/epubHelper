@@ -66,7 +66,6 @@ def extract(search, line):
 	if search in line:
 		endPoint = line.find(" -->") # these lines should always end " -->"
 		return line[line.find(search) + len(search):endPoint]
-	
 def doBookInfo(filepath):
 	
 	findTitle = "<!-- Title: "
@@ -121,9 +120,9 @@ def doBookInfo(filepath):
 							
 	
 	if os.path.isdir(bookDir):
-		print("Destination directory " + bookDir + " exists!")
+		print("Destination directory " + bookDir + " exists.")
 		if force:
-			print("Overwriting with -f flag.")
+			print("Overwriting with -f (force) flag.")
 			rmtree(bookDir)
 		else:
 			print("(use the -f flag to force  in future)")
@@ -174,8 +173,7 @@ def dochapters(filepath):
 									nextline = fp.readline()
 									while nextline.find(endChapter) == -1:
 										if imageID in nextline:
-											nextline = "<a id=\"image-" + 
-											str(len(images) + 1) + "\"><!-- Anchor --></a>"
+											nextline = "<a id=\"image-" + str(len(images) + 1) + "\"><!-- Anchor --></a>"
 										elif imageTag in nextline:
 											firstCharImage = nextline.find('/') + 1
 											lastHalfOfLine = nextline[firstCharImage:]
@@ -183,8 +181,10 @@ def dochapters(filepath):
 											imageName = nextline[firstCharImage:lastCharImage+firstCharImage]
 											images.append(imageName)
 											firstHalfOfLine = nextline[nextline.find("\"")+1:]
-											nextline = "<img src=\"../Images/" + imageName + nextline[nextline.find(imageName)+len(imageName):]
+											nextline = "<img src=\"../Images/" +  imageName + nextline[nextline.find(imageName)+len(imageName):]
 											pathToImage = firstHalfOfLine[:firstHalfOfLine.find("\"")]
+											print(pathToImage)
+											print(filepath[:filepath.rfind("/")] + "/" + pathToImage)
 											copyfile(filepath[:filepath.rfind("/")] + "/" + pathToImage, bookDir + "/OEBPS/Images/" + imageName)
 										writeFile.write(nextline)
 										nextline = fp.readline()
@@ -263,14 +263,7 @@ def docontent(filepath):
 					line += "\t<reference href=\"" + each [1] + "\" type=\"text\" />\n"
 			elif "[TITLE]" in line:
 				line = line[0:line.find("[TITLE]")] + title + line[line.find("[TITLE]") + len("[TITLE]"):]
-			elif "[SUBJECTS]" in line:
-				line = line[0:line.find("[SUBJECTS]")] + subjects + line[line.find("[SUBJECTS]") + len("[SUBJECTS]"):]
-			elif "[PUBLISHER]" in line:
-				line = line[0:line.find("[PUBLISHER]")] + publisher + line[line.find("[PUBLISHER]") + len("[PUBLISHER]"):]
-			elif "[COPYRIGHT]" in line:
-				line = line[0:line.find("[COPYRIGHT]")] + copyright + line[line.find("[COPYRIGHT]") + len("[COPYRIGHT]"):]
-			elif "date opf:event=\"publication\"" in line:
-				line = replace("2000-01-01", today, line)
+				print(line)
 			elif "role=\"aut\"" in line:
 				line = replace(firstnameSearch, authorFirst, line)
 				line = replace(lastnameSearch, authorLast, line)
