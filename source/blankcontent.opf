@@ -5,7 +5,7 @@
     <!-- ISBN -->
     <dc:identifier id="bookid" opf:scheme="ISBN">urn:isbn:[ISBN]</dc:identifier>
     <dc:title>[TITLE]</dc:title>
-    <dc:rights>Copyright © 2019 [COPYRIGHT]. All rights reserved.</dc:rights>
+    <dc:rights>[COPYRIGHT]</dc:rights>
 
     <!-- BISAC Subject Headings List: http://bisg.org/?page=BISACFaQ -->
     <dc:subject>[SUBJECTS]</dc:subject>
